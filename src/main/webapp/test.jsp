@@ -7,7 +7,7 @@
 <title>Trang Test</title>
 </head>
 <body>
-    <h2>Hi!</h2>
+    <h2>Hi, Is the server ok?</h2>
     <p>Now: <%= new java.util.Date() %></p>
 </body>
 </html>
