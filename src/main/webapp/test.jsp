@@ -4,10 +4,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Trang Test</title>
+<title>Test page</title>
 </head>
 <body>
-    <h2>Hi, Is the server ok?</h2>
+    <h2>Hi, is the server ok?</h2>
     <p>Now: <%= new java.util.Date() %></p>
 </body>
 </html>
