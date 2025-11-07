@@ -7,7 +7,7 @@
 <title>Test page</title>
 </head>
 <body>
-    <h2>Hi, is the server ok?</h2>
+    <h2>Hi, is the server ok bro?</h2>
     <p>Now: <%= new java.util.Date() %></p>
 </body>
 </html>
