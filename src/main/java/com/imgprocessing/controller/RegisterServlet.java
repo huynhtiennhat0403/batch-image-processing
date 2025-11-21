@@ -37,33 +37,40 @@ public class RegisterServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
+        // ===== BẮT ĐẦU THÊM CODE DEBUG =====
+        System.out.println("--- BẮT ĐẦU XỬ LÝ YÊU CẦU ĐĂNG KÝ ---");
+        
         // 1. Lấy dữ liệu từ form
         String email = request.getParameter("email");
         String username = request.getParameter("username");
         String rawPassword = request.getParameter("password");
-
-        // (Tùy chọn) Bạn nên thêm logic kiểm tra (validate) dữ liệu ở đây
-        // Ví dụ: kiểm tra password có đủ dài không, email có đúng định dạng không...
+        
+        System.out.println("Email nhận được: " + email);
+        System.out.println("Username nhận được: " + username);
+        System.out.println("Password nhận được: " + (rawPassword != null ? "******" : "null"));
 
         try {
             // 2. Gọi DAO để đăng ký
+            System.out.println("Chuẩn bị gọi userDAO.registerUser()...");
             boolean success = userDAO.registerUser(email, username, rawPassword);
+            System.out.println("Kết quả từ userDAO.registerUser(): " + success); // << RẤT QUAN TRỌNG
 
             if (success) {
+                System.out.println("ĐĂNG KÝ THÀNH CÔNG! Chuyển hướng về trang login.");
                 // 3. Đăng ký thành công -> Chuyển hướng sang trang đăng nhập
-                // Dùng sendRedirect để đổi URL trên trình duyệt
                 response.sendRedirect("login");
             } else {
+                System.out.println("ĐĂNG KÝ THẤT BẠI! Forward về lại trang register.");
                 // 4. Đăng ký thất bại (ví dụ: trùng username/email)
-                // Gửi một thông báo lỗi...
                 request.setAttribute("errorMessage", "Đăng ký thất bại! Username hoặc Email đã tồn tại.");
-                // ...và "forward" (giữ nguyên request) trở lại trang register.jsp
                 request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
             }
         } catch (Exception e) {
+            System.out.println("!!! CÓ LỖI EXCEPTION XẢY RA TRONG SERVLET !!!");
             e.printStackTrace();
             request.setAttribute("errorMessage", "Lỗi máy chủ: " + e.getMessage());
             request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
         }
+        System.out.println("--- KẾT THÚC XỬ LÝ YÊU CẦU ĐĂNG KÝ ---");
     }
 }
