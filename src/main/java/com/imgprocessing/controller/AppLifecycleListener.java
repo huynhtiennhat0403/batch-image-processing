@@ -1,5 +1,6 @@
 package com.imgprocessing.controller;
 
+import com.imgprocessing.worker.ImageProcessingWorker;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;

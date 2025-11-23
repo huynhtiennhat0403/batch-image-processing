@@ -2,9 +2,9 @@ package com.imgprocessing.controller;
 
 import java.io.IOException;
 
-import com.imgprocessing.dao.UserDAO;
-import com.imgprocessing.model.User;
-import com.imgprocessing.util.PasswordUtil; 
+import com.imgprocessing.model.bean.User;
+import com.imgprocessing.model.dao.UserDAO;
+import com.imgprocessing.util.PasswordUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;

@@ -2,7 +2,7 @@ package com.imgprocessing.controller;
 
 import java.io.IOException;
 
-import com.imgprocessing.dao.UserDAO; 
+import com.imgprocessing.model.dao.UserDAO;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;

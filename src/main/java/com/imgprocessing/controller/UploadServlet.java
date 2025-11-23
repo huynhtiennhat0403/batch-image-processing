@@ -1,8 +1,8 @@
 package com.imgprocessing.controller;
 
-import com.imgprocessing.dao.JobDAO;
-import com.imgprocessing.model.Job;
-import com.imgprocessing.model.User;
+import com.imgprocessing.model.bean.Job;
+import com.imgprocessing.model.bean.User;
+import com.imgprocessing.model.dao.JobDAO;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;

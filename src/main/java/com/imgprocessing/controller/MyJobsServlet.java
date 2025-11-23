@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
-import com.imgprocessing.dao.JobDAO;
-import com.imgprocessing.model.Job;
-import com.imgprocessing.model.User;
+import com.imgprocessing.model.bean.Job;
+import com.imgprocessing.model.bean.User;
+import com.imgprocessing.model.dao.JobDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;

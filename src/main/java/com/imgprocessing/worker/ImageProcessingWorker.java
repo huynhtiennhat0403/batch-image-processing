@@ -1,6 +1,6 @@
-package com.imgprocessing.controller;
+package com.imgprocessing.worker;
 
-import com.imgprocessing.dao.ImageProcessingService;
+import com.imgprocessing.service.ImageProcessingService;
 import java.util.concurrent.BlockingQueue;
 
 public class ImageProcessingWorker implements Runnable {
