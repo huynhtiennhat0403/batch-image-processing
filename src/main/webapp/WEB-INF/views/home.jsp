@@ -90,7 +90,7 @@
 <body>
     <div class="container">
         <h1>Batch Image Processing System</h1>
-        
+
         <c:choose>
             <%-- CASE 1: Đã đăng nhập --%>
             <c:when test="${sessionScope.loggedInUser != null}">
@@ -104,7 +104,7 @@
 
                 <a class="logout" href="logout">Đăng xuất</a>
             </c:when>
-            
+
             <%-- CASE 2: Chưa đăng nhập --%>
             <c:otherwise>
                 <h3>Chào mừng bạn!</h3>
