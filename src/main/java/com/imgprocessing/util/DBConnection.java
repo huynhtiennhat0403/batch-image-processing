@@ -8,7 +8,7 @@ public class DBConnection {
 	
     private static final String DB_NAME = "networkprogramming"; 
     private static final String DB_USER = "root"; 
-    private static final String DB_PASSWORD = "123456";
+    private static final String DB_PASSWORD = "Bonbone@0403";
 
     private static final String JDBC_URL = "jdbc:mysql://localhost:3306/" + DB_NAME 
                                          + "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";

@@ -6,7 +6,7 @@ import com.imgprocessing.util.ZipUtil;
 import net.coobird.thumbnailator.Thumbnails;
 import net.coobird.thumbnailator.geometry.Positions;
 
-import java.awt.*;
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,7 +37,7 @@ public class ImageProcessingBO {
 
     /**
      * Xử lý job - resize và watermark tất cả ảnh
-     * 
+     *
      * @param jobId ID của job cần xử lý
      */
     public void processJob(int jobId) {
@@ -61,13 +63,55 @@ public class ImageProcessingBO {
                 imageFiles = paths.filter(Files::isRegularFile).collect(Collectors.toList());
             }
 
-            // Tạo watermark image
-            BufferedImage watermarkImage = createWatermarkImage("Job ID: " + jobId);
+            // Parse taskDetails để lấy thông tin xử lý
+            Map<String, String> taskParams = parseTaskDetails(job.getTaskDetails());
+
+            // Lấy thông tin resize
+            Integer resizeWidth = null;
+            if (taskParams.containsKey("resize")) {
+                try {
+                    resizeWidth = Integer.parseInt(taskParams.get("resize"));
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid resize width: " + taskParams.get("resize"));
+                }
+            }
+
+            // Lấy watermark image nếu có
+            BufferedImage watermarkImage = null;
+            boolean addWatermark = taskParams.containsKey("watermark") &&
+                    "true".equalsIgnoreCase(taskParams.get("watermark"));
+
+            if (addWatermark) {
+                String logoPath = taskParams.get("logoPath");
+                if (logoPath != null && !logoPath.isEmpty()) {
+                    try {
+                        File logoFile = new File(logoPath);
+                        if (logoFile.exists()) {
+                            // 1. Đọc ảnh logo gốc
+                            BufferedImage originalLogo = ImageIO.read(logoFile);
+
+                            watermarkImage = Thumbnails.of(originalLogo)
+                                    .width(36)
+                                    .keepAspectRatio(true)
+                                    .asBufferedImage();
+
+                            System.out.println("Loaded and resized watermark logo: " + logoPath);
+                        } else {
+                            System.err.println("Logo file not found: " + logoPath);
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Failed to load watermark logo: " + logoPath);
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.err.println("No logo path specified for watermark");
+                }
+            }
 
             // Xử lý từng ảnh
             for (Path imagePath : imageFiles) {
                 try {
-                    processImage(imagePath, processedDir, watermarkImage);
+                    processImage(imagePath, processedDir, resizeWidth, watermarkImage);
                     jobDAO.incrementProcessedImages(jobId);
                     System.out.println("Processed image: " + imagePath.getFileName() + " for job " + jobId);
                 } catch (Exception e) {
@@ -99,51 +143,67 @@ public class ImageProcessingBO {
     }
 
     /**
-     * Xử lý một ảnh đơn lẻ
-     * 
-     * @param imagePath      Đường dẫn ảnh gốc
-     * @param outputDir      Thư mục đầu ra
-     * @param watermarkImage Watermark cần thêm
-     * @throws IOException
+     * Parse chuỗi taskDetails thành Map
+     * Format: "resize:800;watermark:true;logoPath:C:/path/to/logo.png;"
+     *
+     * @param taskDetails Chuỗi taskDetails
+     * @return Map chứa các tham số
      */
-    private void processImage(Path imagePath, Path outputDir, BufferedImage watermarkImage) throws IOException {
-        File outputFile = outputDir.resolve(imagePath.getFileName()).toFile();
+    private Map<String, String> parseTaskDetails(String taskDetails) {
+        Map<String, String> params = new HashMap<>();
 
-        Thumbnails.of(imagePath.toFile())
-                .size(800, 800)
-                .keepAspectRatio(true)
-                .watermark(Positions.BOTTOM_RIGHT, watermarkImage, 0.5f)
-                .toFile(outputFile);
+        if (taskDetails == null || taskDetails.isEmpty()) {
+            return params;
+        }
+
+        String[] pairs = taskDetails.split(";");
+        for (String pair : pairs) {
+            if (pair.contains(":")) {
+                String[] keyValue = pair.split(":", 2);
+                if (keyValue.length == 2) {
+                    params.put(keyValue[0].trim(), keyValue[1].trim());
+                }
+            }
+        }
+
+        return params;
     }
 
     /**
-     * Tạo watermark image từ text
-     * 
-     * @param text Nội dung watermark
-     * @return BufferedImage chứa watermark
+     * Xử lý một ảnh đơn lẻ
+     *
+     * @param imagePath      Đường dẫn ảnh gốc
+     * @param outputDir      Thư mục đầu ra
+     * @param resizeWidth    Chiều rộng resize (null nếu không resize)
+     * @param watermarkImage Watermark image (null nếu không thêm watermark)
+     * @throws IOException
      */
-    private BufferedImage createWatermarkImage(String text) {
-        int width = 250;
-        int height = 50;
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = image.createGraphics();
+    private void processImage(Path imagePath, Path outputDir, Integer resizeWidth,
+                              BufferedImage watermarkImage) throws IOException {
+        File outputFile = outputDir.resolve(imagePath.getFileName()).toFile();
 
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setFont(new Font("Arial", Font.BOLD, 20));
-        g2d.setColor(Color.BLACK);
+        Thumbnails.Builder<?> builder = Thumbnails.of(imagePath.toFile());
 
-        FontMetrics fm = g2d.getFontMetrics();
-        int x = (width - fm.stringWidth(text)) / 2;
-        int y = fm.getAscent() + (height - (fm.getAscent() + fm.getDescent())) / 2;
+        // Áp dụng resize nếu có
+        if (resizeWidth != null && resizeWidth > 0) {
+            builder.size(resizeWidth, resizeWidth)
+                    .keepAspectRatio(true);
+        } else {
+            // Không resize, giữ nguyên kích thước gốc
+            builder.scale(1.0);
+        }
 
-        g2d.drawString(text, x, y);
-        g2d.dispose();
-        return image;
+        // Áp dụng watermark nếu có
+        if (watermarkImage != null) {
+            builder.watermark(Positions.BOTTOM_RIGHT, watermarkImage, 0.5f);
+        }
+
+        builder.toFile(outputFile);
     }
 
     /**
      * Xóa các file tạm của job
-     * 
+     *
      * @param jobId ID của job
      */
     public void cleanupJobFiles(int jobId) {
@@ -169,7 +229,7 @@ public class ImageProcessingBO {
 
     /**
      * Xóa thư mục và tất cả nội dung bên trong
-     * 
+     *
      * @param directory Thư mục cần xóa
      */
     private void deleteDirectory(File directory) {
@@ -186,7 +246,7 @@ public class ImageProcessingBO {
 
     /**
      * Kiểm tra job có đang được xử lý không
-     * 
+     *
      * @param jobId ID của job
      * @return true nếu đang processing
      * @throws SQLException
