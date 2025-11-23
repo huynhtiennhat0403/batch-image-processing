@@ -26,112 +26,111 @@ import java.util.stream.Collectors;
 
 @WebServlet("/upload")
 @MultipartConfig(
-    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
-    maxFileSize = 1024 * 1024 * 10,       // 10MB
-    maxRequestSize = 1024 * 1024 * 50     // 50MB
+        fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
+        maxFileSize = 1024 * 1024 * 10,       // 10MB
+        maxRequestSize = 1024 * 1024 * 50     // 50MB
 )
 public class UploadServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final String UPLOAD_DIR_BASE = "C:/uploads/";
-    
+
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.getRequestDispatcher("/WEB-INF/views/upload.jsp").forward(request, response);
     }
-    
+
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        // 1. Kiểm tra người dùng đã đăng nhập chưa
+
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("loggedInUser") == null) {
             response.sendRedirect(request.getContextPath() + "/login");
             return;
         }
-        
+
         User user = (User) session.getAttribute("loggedInUser");
         int userId = user.getUserId();
-        
+
         try {
-            // 2. Lấy tham số form và file
+            // 2. Lấy tham số form
             String addWatermark = request.getParameter("addWatermark");
             String resizeWidth = request.getParameter("resizeWidth");
-            
-            // 3. Lọc các file ảnh được upload (hỗ trợ cả 2 tên: "images" và "imageFiles")
+
+            // --- VALIDATION: BẮT BUỘC CHỌN ÍT NHẤT 1 TÁC VỤ ---
+            boolean isWatermarkSelected = (addWatermark != null && !addWatermark.isEmpty());
+            boolean isResizeSelected = (resizeWidth != null && !resizeWidth.trim().isEmpty());
+
+            if (!isWatermarkSelected && !isResizeSelected) {
+                request.setAttribute("errorMessage", "Vui lòng chọn ít nhất một tác vụ xử lý (Watermark hoặc Resize)!");
+                request.getRequestDispatcher("/WEB-INF/views/upload.jsp").forward(request, response);
+                return;
+            }
+            // ---------------------------------------------------
+
             Collection<Part> fileParts = request.getParts().stream()
-                .filter(part -> (part.getName().equals("images") || part.getName().equals("imageFiles")) 
-                        && part.getSize() > 0)
-                .collect(Collectors.toList());
-            
+                    .filter(part -> (part.getName().equals("images") || part.getName().equals("imageFiles"))
+                            && part.getSize() > 0)
+                    .collect(Collectors.toList());
+
             if (fileParts.isEmpty()) {
                 request.setAttribute("errorMessage", "Vui lòng chọn ít nhất một file ảnh.");
                 request.getRequestDispatcher("/WEB-INF/views/upload.jsp").forward(request, response);
                 return;
             }
-            
-            // 4. Đếm số lượng ảnh và tạo taskDetails
+
             int totalImages = fileParts.size();
             StringBuilder taskDetailsBuilder = new StringBuilder();
-            if (resizeWidth != null && !resizeWidth.trim().isEmpty()) {
+            if (isResizeSelected) {
                 taskDetailsBuilder.append("resize:").append(resizeWidth).append(";");
             }
-            // Hỗ trợ cả 2 format: "on" và "true"
-            if ("on".equals(addWatermark) || "true".equals(addWatermark)) {
+            if (isWatermarkSelected) {
                 taskDetailsBuilder.append("watermark:true;");
             }
-            
-            // 5. Tạo Job mới trong CSDL
+
             JobDAO jobDAO = new JobDAO();
             Job newJob = new Job();
             newJob.setUserId(userId);
             newJob.setTotalImages(totalImages);
             newJob.setStatus("PENDING");
             newJob.setTaskDetails(taskDetailsBuilder.toString());
-            
+
             int jobId = jobDAO.createJob(newJob);
             if (jobId == -1) {
                 throw new SQLException("Không thể tạo Job trong cơ sở dữ liệu.");
             }
-            
-            // 6. Tạo thư mục upload và lưu file
+
             Path uploadPath = Paths.get(UPLOAD_DIR_BASE, "job_" + jobId);
             Files.createDirectories(uploadPath);
-            
-            // 7. Lưu tất cả file ảnh
+
             for (Part filePart : fileParts) {
                 String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-                // Tạo tên file unique để tránh trùng
                 String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
                 Path filePath = uploadPath.resolve(uniqueFileName);
-                
                 try (InputStream fileContent = filePart.getInputStream()) {
                     Files.copy(fileContent, filePath, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
-            
-            // 8. Lấy hàng đợi từ ServletContext
+
             ServletContext context = getServletContext();
             BlockingQueue<Integer> jobQueue = (BlockingQueue<Integer>) context.getAttribute("jobQueue");
-            
             if (jobQueue == null) {
-                throw new ServletException("Hệ thống xử lý nền chưa sẵn sàng. Vui lòng thử lại sau.");
+                throw new ServletException("Hệ thống xử lý nền chưa sẵn sàng.");
             }
-            
-            // 9. Đưa job vào hàng đợi xử lý
             jobQueue.put(jobId);
-            
-            // 10. Thành công - hiển thị thông báo
-            request.setAttribute("successMessage", 
-                "Thành công! " + totalImages + " ảnh đã được đưa vào hàng đợi xử lý. " +
-                "Vui lòng kiểm tra trang Lịch sử tác vụ để xem tiến độ.");
+
+            // --- THÔNG BÁO FLASH MESSAGE (SẼ HIỆN Ở TRANG UPLOAD HOẶC CHUYỂN HƯỚNG) ---
+            request.setAttribute("successMessage",
+                    "✅ Upload thành công! " + totalImages + " ảnh đang được xử lý nền.<br>" +
+                            "⚠️ <b>Lưu ý:</b> Khi xử lý xong, vui lòng vào menu <b>'Lịch sử tác vụ'</b> để tải file kết quả.");
+
+            // Reset form bằng cách forward lại view
             request.getRequestDispatcher("/WEB-INF/views/upload.jsp").forward(request, response);
-            
-        } catch (IOException | ServletException | SQLException | InterruptedException e) {
-            // Bắt ngoại lệ và báo lỗi
+
+        } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("errorMessage", "Đã xảy ra lỗi nghiêm trọng: " + e.getMessage());
+            request.setAttribute("errorMessage", "Đã xảy ra lỗi: " + e.getMessage());
             request.getRequestDispatcher("/WEB-INF/views/upload.jsp").forward(request, response);
         }
     }
