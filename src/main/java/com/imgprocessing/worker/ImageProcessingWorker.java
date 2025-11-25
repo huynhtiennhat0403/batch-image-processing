@@ -1,7 +1,7 @@
 package com.imgprocessing.worker;
 
 import com.imgprocessing.service.ImageProcessingService;
-import com.imgprocessing.mode.bo.ImageProcessingBO;
+import com.imgprocessing.model.bo.ImageProcessingBO;
 import java.util.concurrent.BlockingQueue;
 
 public class ImageProcessingWorker implements Runnable {
