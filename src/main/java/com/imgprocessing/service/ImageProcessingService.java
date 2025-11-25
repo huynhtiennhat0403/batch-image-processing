@@ -93,8 +93,23 @@ public class ImageProcessingService {
 
                     thumbnailBuilder.toFile(outputFile);
 
-
+                    // Cập nhật database ngay lập tức
                     jobDAO.incrementProcessedImages(jobId);
+                    successCount++;
+
+                    // Log chi tiết sau khi xử lý xong mỗi file
+                    BufferedImage processedImg = ImageIO.read(outputFile);
+                    long processedSize = outputFile.length();
+                    System.out.println(String.format(
+                            "✅ [%d/%d] %s | %dx%d → %dx%d | %.2fKB → %.2fKB (%.1f%% giảm)",
+                            successCount + failCount,
+                            imageFiles.size(),
+                            imagePath.getFileName(),
+                            origWidth, origHeight,
+                            processedImg.getWidth(), processedImg.getHeight(),
+                            origSize / 1024.0,
+                            processedSize / 1024.0,
+                            ((origSize - processedSize) * 100.0 / origSize)));
 
                 } catch (Exception e) {
                     failCount++;
@@ -149,6 +164,7 @@ public class ImageProcessingService {
     /**
      * Parse taskDetails để lấy resize width
      * Format: "resize:300;watermark:true"
+     * 
      * @param taskDetails String chứa thông tin task
      * @return resize width, mặc định 800 nếu không có
      */

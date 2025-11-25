@@ -24,6 +24,25 @@
             border-radius: 4px;
         }
     </style>
+    <script>
+        // Auto-refresh trang khi có job đang PROCESSING hoặc PENDING
+        window.onload = function() {
+            // Kiểm tra xem có job nào đang xử lý không
+            var hasActiveJobs = false;
+            <c:forEach var="job" items="${jobList}">
+                <c:if test="${job.status == 'PROCESSING' or job.status == 'PENDING'}">
+                    hasActiveJobs = true;
+                </c:if>
+            </c:forEach>
+            
+            // Nếu có job đang xử lý, tự động refresh sau 3 giây
+            if (hasActiveJobs) {
+                setTimeout(function() {
+                    location.reload();
+                }, 3000); // Refresh mỗi 3 giây
+            }
+        };
+    </script>
 </head>
 <body>
 

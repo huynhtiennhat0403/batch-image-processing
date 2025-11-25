@@ -25,10 +25,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
 @WebServlet("/upload")
-@MultipartConfig(
-        fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
-        maxFileSize = 1024 * 1024 * 10,       // 10MB
-        maxRequestSize = 1024 * 1024 * 50     // 50MB
+@MultipartConfig(fileSizeThreshold = 1024 * 1024 * 2, // 2MB
+        maxFileSize = 1024 * 1024 * 20, // 20MB mỗi file
+        maxRequestSize = 1024 * 1024 * 500 // 500MB tổng request (cho phép upload nhiều file lớn)
 )
 public class UploadServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;

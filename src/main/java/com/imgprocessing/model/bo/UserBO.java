@@ -1,4 +1,4 @@
-package com.imgprocessing.mode.bo;
+package com.imgprocessing.model.bo;
 
 import com.imgprocessing.model.bean.User;
 import com.imgprocessing.model.dao.UserDAO;
